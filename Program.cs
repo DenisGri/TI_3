@@ -46,39 +46,6 @@ namespace RSA_Check
             return str.Aggregate<char, long>(100, (current, t) => (current + t) * (current + t % n));
         }
 
-        private static long GetE(long f)
-        {
-            var valArr = new List<long>();
-            var e = f - 1;
-            for (var i = 2; i < f; i++)
-            {
-                if (IsPrime(e) && IsMutuallySimple(e, f))
-                {
-                    valArr.Add(e);
-                }
-
-                e--;
-            }
-
-            Random random = new();
-            var index = random.Next(valArr.Count);
-            return valArr[index];
-        }
-
-        private static TempValuesGcd GetExtendGcd(long a, long b)
-        {
-            if (b == 0)
-            {
-                return new TempValuesGcd(a, 1, 0);
-            }
-
-            var tmp = GetExtendGcd(b, a % b);
-            var d = tmp.D;
-            var y = tmp.X - tmp.Y * (a / b);
-            var x = tmp.Y;
-            return new TempValuesGcd(d, x, y);
-        }
-
         private static long Power(long x, long y, long n)
         {
             if (y == 0)
@@ -118,6 +85,40 @@ namespace RSA_Check
 
             return true;
         }
+
+        private static long GetE(long f)
+        {
+            var valArr = new List<long>();
+            var e = f - 1;
+            for (var i = 2; i < f; i++)
+            {
+                if (IsPrime(e) && IsMutuallySimple(e, f))
+                {
+                    valArr.Add(e);
+                }
+
+                e--;
+            }
+
+            Random random = new();
+            var index = random.Next(valArr.Count);
+            return valArr[index];
+        }
+
+        private static TempValuesGcd GetExtendGcd(long a, long b)
+        {
+            if (b == 0)
+            {
+                return new TempValuesGcd(a, 1, 0);
+            }
+
+            var tmp = GetExtendGcd(b, a % b);
+            var d = tmp.D;
+            var y = tmp.X - tmp.Y * (a / b);
+            var x = tmp.Y;
+            return new TempValuesGcd(d, x, y);
+        }
+
 
         private class TempValuesGcd
         {
