@@ -1,12 +1,81 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace RSA_Check
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
+        {
+            do
+            {
+                Console.WriteLine($"Chose signature method: ");
+                Console.WriteLine("1. RSA Cryptography");
+                Console.WriteLine("2. RSA PQRED");
+                Console.WriteLine("3: Quit");
+                Console.Write("Enter the number of your choice: ");
+                var userChoice = Console.ReadLine();
+
+                if(!uint.TryParse(userChoice, out _)) continue;
+
+                if (userChoice == "3")
+                {
+                    Environment.Exit(0);
+                }
+
+                Console.WriteLine("Choice = " + userChoice);
+
+                if(userChoice == "1")
+                {
+                    RSA_Cryptography();
+                }
+
+                if(userChoice == "2")
+                {
+                    RSA_PQRED();
+                }
+
+            } while (true);
+        }
+
+        static void RSA_Cryptography()
+        {
+            try
+            {
+                ASCIIEncoding ByteConverter = new ASCIIEncoding();
+
+                Console.WriteLine("Write encrypted data:");
+
+                string dataString = Console.ReadLine();
+
+                byte[] originalData = ByteConverter.GetBytes(dataString);
+                byte[] signedData;
+
+                RSACryptoServiceProvider RSAalg = new RSACryptoServiceProvider();
+
+                RSAParameters Key = RSAalg.ExportParameters(true);
+
+                signedData = HashAndSignBytes(originalData, Key);
+
+                if (VerifySignedHash(originalData, signedData, Key))
+                {
+                    Console.WriteLine("The data was verified.");
+                }
+                else
+                {
+                    Console.WriteLine("The data does not match the signature.");
+                }
+            }
+            catch (ArgumentNullException)
+            {
+                Console.WriteLine("The data was not signed or verified\n");
+            }
+        }
+
+        static void RSA_PQRED()
         {
             Console.WriteLine("List of prime numbers:\n" +
                               "2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97,\n" +
@@ -29,22 +98,55 @@ namespace RSA_Check
                 d += f;
             }
 
-            var mainHash = RsaCheckHash(text, e);
-            var sign = Power(mainHash, d, r);
-            Console.WriteLine($"Hash: {mainHash}\nSign: {sign}");
+            var mainHash = RsaHash(text, r);
+            var signPrivate = Power(mainHash, d, r);
+            Console.WriteLine($"Hash: {mainHash}\nSign: {signPrivate}");
             Console.WriteLine($"Write message and sign to check");
             var checkText = Console.ReadLine()?.ToUpper();
             checkText = checkText?.Replace("\\s", "");
             var newSign = long.Parse(Console.ReadLine() ?? string.Empty);
-            var newHash = RsaCheckHash(checkText, r);
+            var newHash = RsaHash(checkText, r);
             Console.WriteLine(newHash == Power(newSign, e, r) ? $"Sign accepted" : $"Sign denied");
             Console.WriteLine($"Hash: {newHash}\nSignature hash: {Power(newSign, e, r)}");
         }
 
-        private static long RsaCheckHash(string str, long n)
+        private static byte[] HashAndSignBytes(byte[] DataToSign, RSAParameters Key)
         {
-            return str.Aggregate<char, long>(100, (current, t) => (current + t) * (current + t % n));
+            try
+            {
+                RSACryptoServiceProvider RSAalg = new RSACryptoServiceProvider();
+
+                RSAalg.ImportParameters(Key);
+
+                return RSAalg.SignData(DataToSign, SHA256.Create());
+            }
+            catch (CryptographicException e)
+            {
+                Console.WriteLine(e.Message);
+
+                return null;
+            }
         }
+
+        private static bool VerifySignedHash(byte[] DataToVerify, byte[] SignedData, RSAParameters Key)
+        {
+            try
+            {
+                RSACryptoServiceProvider RSAalg = new RSACryptoServiceProvider();
+
+                RSAalg.ImportParameters(Key);
+
+                return RSAalg.VerifyData(DataToVerify, SHA256.Create(), SignedData);
+            }
+            catch (CryptographicException e)
+            {
+                Console.WriteLine(e.Message);
+
+                return false;
+            }
+        }
+
+        private static long RsaHash(string str, long n) => str.Aggregate<char, long>(100, (current, t) => (current + t) * (current + t % n));
 
         private static long Power(long x, long y, long n)
         {
@@ -118,7 +220,6 @@ namespace RSA_Check
             var x = tmp.Y;
             return new TempValuesGcd(d, x, y);
         }
-
 
         private class TempValuesGcd
         {
